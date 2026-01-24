@@ -6,9 +6,9 @@ import cv2
 import numpy as np
 from PyQt5.QtWidgets import (QMainWindow, QPushButton, QLabel, QVBoxLayout,
                              QHBoxLayout, QWidget, QFileDialog, QMessageBox,
-                             QSizePolicy, QGridLayout)
-from PyQt5.QtGui import QPixmap, QFontDatabase
-from PyQt5.QtCore import Qt, QTimer
+                             QSizePolicy, QGridLayout, QMenu, QAction)
+from PyQt5.QtGui import QPixmap, QFontDatabase, QIcon, QPainter, QPainterPath
+from PyQt5.QtCore import Qt, QTimer, QPoint, QSize
 from video_processor import VideoProcessingThread
 from utils import load_yolo_model, centerWindow, displayImage, displayCvImage, get_monospace_font
 
@@ -42,7 +42,54 @@ class DroneDetectionApp(QMainWindow):
         self.btn_start_detection = QPushButton("开始检测"); self.btn_start_detection.setObjectName("neumorphicButton"); self.btn_start_detection.clicked.connect(self.startDetection); self.btn_start_detection.setEnabled(False)
         self.btn_pause_resume = QPushButton("暂停"); self.btn_pause_resume.setObjectName("neumorphicButton"); self.btn_pause_resume.clicked.connect(self.togglePauseResume); self.btn_pause_resume.setEnabled(False)
         self.btn_stop_detection = QPushButton("停止检测"); self.btn_stop_detection.setObjectName("neumorphicButton"); self.btn_stop_detection.clicked.connect(self.stopPotentialVideoThread); self.btn_stop_detection.setEnabled(False)
+        
+        # --- 用户个人中心按钮 ---
+        self.btn_user_profile = QPushButton(); self.btn_user_profile.setFixedSize(40, 40); self.btn_user_profile.setObjectName("profileButton")
+        # 更加融合的样式：透明背景，悬停时显示淡蓝色光圈
+        self.btn_user_profile.setStyleSheet("""
+            QPushButton { 
+                border-radius: 20px; 
+                background-color: transparent; 
+                border: 2px solid rgba(220, 225, 230, 0.8); 
+            }
+            QPushButton:hover { 
+                border-color: #0071E3; 
+                background-color: rgba(0, 113, 227, 0.05); 
+            }
+        """)
+        
+        if os.path.exists("user_avatar.png"):
+            # 动态生成圆形头像
+            try:
+                size = 40  # 对应按钮大小
+                force_circle_pixmap = QPixmap(size, size)
+                force_circle_pixmap.fill(Qt.transparent)
+                
+                painter = QPainter(force_circle_pixmap)
+                painter.setRenderHint(QPainter.Antialiasing)
+                
+                # 创建圆形裁剪路径
+                path = QPainterPath()
+                path.addEllipse(0, 0, size, size)
+                painter.setClipPath(path)
+                
+                # 加载并绘制原图 (缩放到适应尺寸)
+                orig_pixmap = QPixmap("user_avatar.png").scaled(size, size, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+                painter.drawPixmap(0, 0, orig_pixmap)
+                painter.end()
+                
+                self.btn_user_profile.setIcon(QIcon(force_circle_pixmap))
+                self.btn_user_profile.setIconSize(QSize(size, size)) # 填满按钮
+            except Exception as e:
+                print(f"头像处理出错: {e}")
+                self.btn_user_profile.setText("User")
+        else:
+             self.btn_user_profile.setText("User")
+
+        self.btn_user_profile.clicked.connect(self.showUserMenu)
+
         button_layout.addWidget(self.btn_load_image); button_layout.addWidget(self.btn_load_video); button_layout.addStretch(1); button_layout.addWidget(self.btn_start_detection); button_layout.addWidget(self.btn_pause_resume); button_layout.addWidget(self.btn_stop_detection)
+        button_layout.addSpacing(10); button_layout.addWidget(self.btn_user_profile)
 
         # --- 中间显示区域 ---
         display_widget = QWidget(); display_widget.setObjectName("displayArea")
@@ -130,15 +177,14 @@ class DroneDetectionApp(QMainWindow):
                 padding: 10px; /* 增加内边距，避免文字太贴边 */
             }}
 
-            /* --- 清新可爱的字体样式 --- */
+            /* --- 清晰圆润的字体样式 --- */
             QWidget#infoPanelStaticNoise QLabel {{
                 background-color: transparent; /* 内部标签背景透明 */
                 color: {display_text_color}; 
-                font-family: "Comic Sans MS", "Segoe UI", "{monospace_font}", sans-serif; /* 更可爱的字体 */
+                font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", sans-serif; /* 清晰圆润的字体 */
                 font-size: 11pt; /* 基础字体大小 */
                 padding: 2px 4px;
-                /* 字体阴影使文字更清晰 */
-                text-shadow: 0.5px 0.5px 1px rgba(150, 150, 150, 0.5);
+                font-weight: 500; /* 稍微加粗更清晰 */
             }}
 
             QWidget#infoPanelStaticNoise QLabel#infoTitleNoise {{
@@ -264,5 +310,61 @@ class DroneDetectionApp(QMainWindow):
             self.video_thread = None; print("视频处理线程已停止或等待超时。")
             if self.lbl_status.text().startswith("处理中") or self.lbl_status.text().startswith("正在跟踪") or self.lbl_status.text() == "已暂停": self.lbl_status.setText("处理已停止")
         self.is_paused = False; self.update_button_states(is_processing=False)
+    def showUserMenu(self):
+        """显示用户菜单"""
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #FFFFFF;
+                border: 1px solid #E0E0E0;
+                border-radius: 8px;
+                padding: 5px;
+            }
+            QMenu::item {
+                padding: 8px 25px;
+                border-radius: 4px;
+                color: #333333;
+                font-family: 'Microsoft YaHei UI', sans-serif;
+            }
+            QMenu::item:selected {
+                background-color: #F0F5FA;
+                color: #0071E3;
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #EEEEEE;
+                margin: 5px 0px;
+            }
+        """)
+        
+        # 用户详情
+        action_details = QAction("👤  用户详情", self)
+        action_details.triggered.connect(lambda: QMessageBox.information(self, "用户详情", "当前用户: TestUser\n权限: 管理员\n注册时间: 2026-01-20"))
+        menu.addAction(action_details)
+        
+        # 设置
+        action_settings = QAction("⚙️  系统设置", self)
+        action_settings.triggered.connect(lambda: QMessageBox.information(self, "设置", "设置功能正在开发中..."))
+        menu.addAction(action_settings)
+        
+        menu.addSeparator()
+        
+        # 退出登录
+        action_logout = QAction("🚪  退出登录", self)
+        action_logout.triggered.connect(self.logout)
+        menu.addAction(action_logout)
+        
+        # 在按钮下方显示菜单
+        menu.exec_(self.btn_user_profile.mapToGlobal(QPoint(0, self.btn_user_profile.height() + 5)))
+
+    def logout(self):
+        """退出登录"""
+        reply = QMessageBox.question(self, '退出确认', '确定要退出登录吗？', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            # 重启程序以重新进入登录界面，或者直接关闭当前窗口
+            # 这里简单处理为关闭当前窗口，main_app 逻辑可以改进为循环显示登录
+            self.close()
+            # 注意：实际生产环境中可能需要更复杂的登出逻辑，比如清除 session 或重启应用
+
     def closeEvent(self, event):
         print("正在关闭应用程序..."); self.stopPotentialVideoThread(); event.accept()

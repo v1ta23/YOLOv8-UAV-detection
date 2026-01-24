@@ -39,20 +39,22 @@ def run_application():
         print(f"创建启动画面时出错: {e}")
         splash = None # 出错则不使用启动画面
 
-    # --- 确定模型文件路径 ---
+    # --- 模型相关变量 ---
     model_load_status = False
     model_file_path = None
+
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        # 注意这里的相对路径是相对于 main_app.py 的位置
-        # 假设 runs_ultralytics 文件夹在 main_app.py 的同级或上级目录
-        # 您可能需要根据实际文件结构调整这里的路径
         model_relative_path = os.path.join('runs_ultralytics', 'uav_yolov8s_run', 'weights', 'best.pt')
-        # 尝试多种可能的路径组合
         possible_paths = [
             os.path.join(script_dir, model_relative_path),
-            os.path.join(script_dir, '..', model_relative_path), # 尝试上一级目录
+            os.path.join(script_dir, '..', model_relative_path),
         ]
+        
+        if splash:
+            splash.setMessage("正在检查环境...")
+            app.processEvents()
+
         for path in possible_paths:
             if os.path.exists(path):
                 model_file_path = path
@@ -62,40 +64,40 @@ def run_application():
 
         if splash:
             if model_load_status:
-                splash.setMessage("正在加载模型...")
+                splash.setMessage("模型加载成功")
             else:
-                splash.setMessage(f"警告：未找到模型文件!")
+                splash.setMessage(f"警告：未找到模型文件")
             app.processEvents()
-
-        if not model_load_status:
-            print(f"警告: 未能在预设路径找到模型文件 ({model_relative_path})。")
-            # 可选：在这里弹窗提示用户
-            # QMessageBox.warning(None, "模型未找到", f"未能在以下路径找到模型文件:\n{possible_paths}\n检测功能将不可用。")
-            if splash: time.sleep(2) # 如果有启动画面，暂停一会显示警告
+            time.sleep(1) # 稍作停留让用户看清状态
 
     except Exception as e:
-        print(f"确定模型路径时出错: {e}")
-        if splash: splash.setMessage("模型加载出错!")
-        app.processEvents()
-        if splash: time.sleep(2)
+        print(f"初始化出错: {e}")
+        if splash: splash.setMessage("初始化出错!")
 
-    # --- 创建主窗口 ---
+    # --- 登录流程 ---
+    from login_window import LoginWindow
+    from PyQt5.QtWidgets import QDialog
+
     if splash:
-        splash.setMessage("正在初始化界面...")
+        splash.setMessage("准备登录...")
         app.processEvents()
+        time.sleep(0.5)
+        splash.close() # 关闭启动画面
 
-    try:
-        mainWin = DroneDetectionApp(model_path=model_file_path, model_loaded_ok=model_load_status)
-        mainWin.show()
-        if splash:
-            splash.finish(mainWin) # 主窗口显示后关闭启动画面
-    except Exception as e:
-        print(f"创建主窗口时出错: {e}")
-        QMessageBox.critical(None, "程序错误", f"无法初始化主窗口: {e}")
-        sys.exit(1) # 严重错误，退出
-
-    # --- 启动事件循环 ---
-    sys.exit(app.exec_())
+    login = LoginWindow()
+    if login.exec_() == QDialog.Accepted:
+        # 登录成功，启动主程序
+        try:
+            mainWin = DroneDetectionApp(model_path=model_file_path, model_loaded_ok=model_load_status)
+            mainWin.show()
+            sys.exit(app.exec_())
+        except Exception as e:
+            print(f"创建主窗口时出错: {e}")
+            QMessageBox.critical(None, "程序错误", f"无法初始化主窗口: {e}")
+            sys.exit(1)
+    else:
+        # 登录取消或失败，退出程序
+        sys.exit(0)
 
 if __name__ == '__main__':
     run_application()

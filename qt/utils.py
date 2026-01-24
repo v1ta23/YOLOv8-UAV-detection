@@ -2,7 +2,7 @@
 # file: utils.py
 import os
 import cv2
-import torch
+# import torch  # Check lazy import in load_yolo_model
 from PyQt5.QtWidgets import QSplashScreen, QDesktopWidget
 from PyQt5.QtGui import QPixmap, QImage, QFont, QPainter, QColor, QFontDatabase
 from PyQt5.QtCore import Qt
