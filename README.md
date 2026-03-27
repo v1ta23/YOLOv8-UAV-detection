@@ -1,4 +1,4 @@
-# 基于YOLOv8s的无人机检测识别系统
+# 基于YOLOv8与Pyqt5的无人机识别系统
 ## 简介：
 比较简单的无人机检测（UAV Detection）项目，模型为YOLOv8s。
 
