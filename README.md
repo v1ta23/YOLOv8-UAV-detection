@@ -12,7 +12,7 @@ UI类似Apple Google的白色极简风格。
 
 ---
 ##### 无人机数据集（UAV DATASETS）的链接：
-https://www.kaggle.com/datasets/dasmehdixtr/drone-dataset-uav/（约1000张）
+https://www.kaggle.com/datasets/dasmehdixtr/drone-dataset-uav/ （约1000张）
 
 https://github.com/wangdongdut/DUT-Anti-UAV （10000张）
 
